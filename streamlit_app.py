@@ -5,6 +5,7 @@ import tableauserverclient as TSC
 import pandas as pd
 from io import StringIO
 import google.generativeai as genai
+import json
 
 # Set up connection.
 tableau_auth = TSC.PersonalAccessTokenAuth(
@@ -85,21 +86,35 @@ if selected_workbook_name and available_views and selected_view_name:
 
     if view_csv:
         st.subheader("📊 Data")
-        st.write(f"And here's the data for view *{selected_view_name}*:")
         df = pd.read_csv(StringIO(view_csv))
-        st.dataframe(df)  # Use st.dataframe for better display
+        st.dataframe(df)
 
-        # Button to trigger analysis
-        if st.button("Analyze Underlying Data with Gemini"):
+        # Prompt Selection Dropdown
+        prompt_options = ["ppt", "graph", "Root Cause Analysis", "trend"]
+        selected_prompt = st.selectbox("Select Prompt Type:", prompt_options, index=0)  # Default to first option
+
+        # Additional Instructions Text Area
+        additional_instructions = st.text_area("Additional Instructions:", "")
+
+        # Analyze Button
+        if st.button("Analyze with Gemini"):
             with st.spinner("Analyzing data..."):
                 try:
-                    prompt = f"""Analyze the following data and provide key insights, trends, and potential questions.
-                    Data (CSV format):
-                    {view_csv}
-                    """
+                    # Construct Prompt Based on Selection
+                    if selected_prompt == "ppt":
+                        prompt = f"""Read the title first {selected_view_name} and then You are an expert data visualization and analysis assistant. With the following context: {additional_instructions} and the provided dataset, generate a response in the following format: {{"chart_type": "<chart type>", "categories": [<list of categories>], "series": [ {{ "name": "<series name>", "values": [<list of values corresponding to categories>] }} ], "title": "<chart title>", "caption": "<key insights or trends text>" }} Only output the JSON object without any additional text. Analyze this data: {view_csv}"""
+                    elif selected_prompt == "graph":
+                        prompt = f"""Read the title first {selected_view_name} and then  You are an expert data visualization and analysis assistant. With the following context: {additional_instructions} and the provided dataset, generate a response that describes the ideal graph visualization. The JSON object must include the keys: "graph_type" (e.g., line, bar, pie), "title" (suggested title for the graph), "x_axis_label", "y_axis_label", "series" (an array of objects with "name" and "values"), and "image_suggestion" (a detailed description of the ideal graph design including color scheme and layout). Only output the JSON object without any additional text. Analyze this data: {view_csv}"""
+                    elif selected_prompt == "Root Cause Analysis":
+                        prompt = f"""Read the title first {selected_view_name} and then You are a data analyst conducting a Root Cause Analysis based on the dataset below. Your goal is to identify and clearly explain the most impactful changes contributing to the overall trend: {view_csv}"""
+                    elif selected_prompt == "trend":
+                        prompt = f"""Read the title first {selected_view_name} check for {additional_instructions} and then You are a data analyst conducting a trend analysis and your goal is to clearly explain the key insights from the trends and provide accionable recommendations: {view_csv}"""
+
                     response = gemini_model.generate_content(prompt)
+
                     st.subheader("Gemini Analysis:")
-                    st.markdown(response.text)
+                    st.markdown(response.text)  # Display directly as markdown
+
                 except Exception as e:
                     st.error(f"Error during Gemini analysis: {e}")
 
