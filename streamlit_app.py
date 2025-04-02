@@ -3,7 +3,7 @@
 import streamlit as st
 import tableauserverclient as TSC
 import pandas as pd
-import gzip
+
 from io import StringIO
 
 
