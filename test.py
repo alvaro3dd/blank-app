@@ -4,7 +4,6 @@ import streamlit as st
 import tableauserverclient as TSC
 import pandas as pd
 from io import StringIO
-import google.generativeai as genai
 
 # Set up connection.
 tableau_auth = TSC.PersonalAccessTokenAuth(
@@ -14,10 +13,6 @@ tableau_auth = TSC.PersonalAccessTokenAuth(
 )
 server = TSC.Server(st.secrets["tableau"]["server_url"], use_server_version=True)
 
-# Configure Gemini API
-genai.configure(api_key=st.secrets["gemini"]["api_key"])
-model_name = st.secrets["gemini"]["model_name"]
-gemini_model = genai.GenerativeModel(model_name)
 
 # Get all workbooks.
 @st.cache_data(ttl=600)
@@ -68,7 +63,7 @@ def get_view_data(selected_workbook_name, selected_view_name):
         else:
             return None, None
 
-if selected_workbook_name and available_views and selected_view_name:
+if selected_workbook_name and available_views:
     view_image, view_csv = get_view_data(selected_workbook_name, selected_view_name)
 
     # Print results.
@@ -86,23 +81,7 @@ if selected_workbook_name and available_views and selected_view_name:
     if view_csv:
         st.subheader("📊 Data")
         st.write(f"And here's the data for view *{selected_view_name}*:")
-        df = pd.read_csv(StringIO(view_csv))
-        st.dataframe(df)  # Use st.dataframe for better display
-
-        # Button to trigger analysis
-        if st.button("Analyze Underlying Data with Gemini"):
-            with st.spinner("Analyzing data..."):
-                try:
-                    prompt = f"""Analyze the following data and provide key insights, trends, and potential questions.
-                    Data (CSV format):
-                    {view_csv}
-                    """
-                    response = gemini_model.generate_content(prompt)
-                    st.subheader("Gemini Analysis:")
-                    st.markdown(response.text)
-                except Exception as e:
-                    st.error(f"Error during Gemini analysis: {e}")
-
+        st.write(pd.read_csv(StringIO(view_csv)))
     else:
         st.info("No data or image found for the selected view.")
 
