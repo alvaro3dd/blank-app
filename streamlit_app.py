@@ -3,6 +3,8 @@
 import streamlit as st
 import tableauserverclient as TSC
 import pandas as pd
+import gzip
+import StringIO
 
 
 # Set up connection.
