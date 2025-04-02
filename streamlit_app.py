@@ -27,59 +27,66 @@ workbooks_names = [wb.name for wb in workbooks]
 # Create a dropdown to select a workbook
 selected_workbook_name = st.selectbox("Select a Workbook:", workbooks_names)
 
-# Function to get view data for the selected workbook
+# Function to get views for a given workbook
 @st.cache_data(ttl=600)
-def get_view_data(selected_workbook_name):  # Pass the workbook name
+def get_views(selected_workbook_name):
     with server.auth.sign_in(tableau_auth):
-        # Find the selected workbook object within the function
         selected_workbook = next((wb for wb in workbooks if wb.name == selected_workbook_name), None)
-
         if selected_workbook:
             server.workbooks.populate_views(selected_workbook)
             views_names = [v.name for v in selected_workbook.views]
-            view_name = None
-            view_image = None
-            view_csv = None
-
-            if selected_workbook.views:
-                view_item = selected_workbook.views[0]
-                server.views.populate_image(view_item)
-                server.views.populate_csv(view_item)
-                view_name = view_item.name
-                view_image = view_item.image
-                view_csv = b"".join(view_item.csv).decode("utf-8")
-            else:
-                view_name = "No views found in this workbook"
-
-            return views_names, view_name, view_image, view_csv
+            return views_names
         else:
-            return [], f"Workbook '{selected_workbook_name}' not found", None, None
+            return []
 
-if selected_workbook_name:
-    views_names, view_name, view_image, view_csv = get_view_data(selected_workbook_name)
+available_views = get_views(selected_workbook_name)
+
+# Create a dropdown to select a view
+selected_view_name = st.selectbox("Select a View:", available_views)
+
+# Function to get data for the selected view
+@st.cache_data(ttl=600)
+def get_view_data(selected_workbook_name, selected_view_name):
+    with server.auth.sign_in(tableau_auth):
+        selected_workbook = next((wb for wb in workbooks if wb.name == selected_workbook_name), None)
+        if selected_workbook:
+            server.workbooks.populate_views(selected_workbook)
+            selected_view = next((v for v in selected_workbook.views if v.name == selected_view_name), None)
+            if selected_view:
+                server.views.populate_image(selected_view)
+                server.views.populate_csv(selected_view)
+                view_image = selected_view.image
+                view_csv = b"".join(selected_view.csv).decode("utf-8")
+                return view_image, view_csv
+            else:
+                return None, None
+        else:
+            return None, None
+
+if selected_workbook_name and available_views:
+    view_image, view_csv = get_view_data(selected_workbook_name, selected_view_name)
 
     # Print results.
     st.subheader("📓 Workbook")
     st.write(f"Selected workbook: **{selected_workbook_name}**")
 
-    st.subheader("👁️ Views")
-    st.write(
-        f"Workbook *{selected_workbook_name}* has the following views:",
-        ", ".join(views_names) if views_names else "No views found"
-    )
+    st.subheader("👁️ View")
+    st.write(f"Selected view: **{selected_view_name}**")
 
     if view_image:
         st.subheader("🖼️ Image")
-        st.write(f"Here's what view *{view_name}* looks like:")
-        st.image(view_image, width=300)
+        st.write(f"Here's what view *{selected_view_name}* looks like:")
+        st.image(view_image, width=600)
 
     if view_csv:
         st.subheader("📊 Data")
-        st.write(f"And here's the data for view *{view_name}*:")
+        st.write(f"And here's the data for view *{selected_view_name}*:")
         st.write(pd.read_csv(StringIO(view_csv)))
-    elif view_name == "No views found in this workbook":
-        st.warning("No views found in the selected workbook.")
     else:
-        st.info("No view data to display.")
+        st.info("No data or image found for the selected view.")
+
+elif selected_workbook_name and not available_views:
+    st.warning(f"No views found in the selected workbook: **{selected_workbook_name}**")
+
 else:
     st.info("Please select a workbook.")
