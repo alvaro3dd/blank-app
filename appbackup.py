@@ -82,7 +82,7 @@ if selected_workbook_name and available_views and selected_view_name:
     if view_image:
         st.subheader("🖼️ Image")
         st.write(f"Here's what view *{selected_view_name}* looks like:")
-        st.image(view_image, width=600)
+        st.image(view_image, width=2000)
 
     if view_csv:
         st.subheader("📊 Data")
@@ -109,6 +109,7 @@ if selected_workbook_name and available_views and selected_view_name:
                         prompt = f"""Read the title first {selected_view_name} and then You are a data analyst conducting a Root Cause Analysis based on the dataset below. Your goal is to identify and clearly explain the most impactful changes contributing to the overall trend: {view_csv}"""
                     elif selected_prompt == "trend":
                         prompt = f"""Read the title first {selected_view_name} check for {additional_instructions} and then You are a data analyst conducting a trend analysis and your goal is to clearly explain the key insights from the trends and provide accionable recommendations: {view_csv}"""
+
 
                     response = gemini_model.generate_content(prompt)
 
